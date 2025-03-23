@@ -1,0 +1,284 @@
+<!-- templates/manage_kb.html -->
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Manage Knowledge Base</title>
+    <style>
+        body {
+            font-family: 'Arial', sans-serif;
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+            background-color: #f5f5f5;
+        }
+
+        h1 {
+            color: #333;
+            margin-bottom: 30px;
+        }
+
+        .container {
+            background-color: white;
+            border-radius: 10px;
+            padding: 20px;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+        }
+
+        .form-container {
+            margin-bottom: 30px;
+            padding: 20px;
+            background-color: #f9f9f9;
+            border-radius: 8px;
+        }
+
+        .form-group {
+            margin-bottom: 15px;
+        }
+
+        label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: bold;
+        }
+
+        input,
+        textarea {
+            width: 100%;
+            padding: 10px;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+            font-size: 16px;
+        }
+
+        textarea {
+            min-height: 100px;
+            resize: vertical;
+        }
+
+        button {
+            padding: 10px 20px;
+            background-color: #4CAF50;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 16px;
+        }
+
+        button:hover {
+            background-color: #45a049;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+
+        th,
+        td {
+            padding: 12px 15px;
+            text-align: left;
+            border-bottom: 1px solid #ddd;
+        }
+
+        th {
+            background-color: #f2f2f2;
+            font-weight: bold;
+        }
+
+        tr:hover {
+            background-color: #f5f5f5;
+        }
+
+        .delete-btn {
+            background-color: #f44336;
+            padding: 5px 10px;
+        }
+
+        .delete-btn:hover {
+            background-color: #d32f2f;
+        }
+
+        .actions {
+            width: 80px;
+        }
+
+        .success-message {
+            background-color: #dff0d8;
+            color: #3c763d;
+            padding: 10px;
+            margin-bottom: 10px;
+            border-radius: 5px;
+            display: none;
+        }
+
+        .navigation {
+            margin-bottom: 20px;
+        }
+
+        .navigation a {
+            color: #4CAF50;
+            text-decoration: none;
+        }
+
+        .navigation a:hover {
+            text-decoration: underline;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="navigation">
+        <a href="/">&larr; Back to Help Desk</a>
+    </div>
+
+    <h1>Manage Knowledge Base</h1>
+
+    <div class="container">
+        <div id="success-message" class="success-message"></div>
+
+        <div class="form-container">
+            <h2>Add New Knowledge</h2>
+            <div class="form-group">
+                <label for="question">Question:</label>
+                <input type="text" id="question" placeholder="Enter a question...">
+            </div>
+            <div class="form-group">
+                <label for="answer">Answer:</label>
+                <textarea id="answer" placeholder="Enter the answer..."></textarea>
+            </div>
+            <button id="add-btn">Add to Knowledge Base</button>
+        </div>
+
+        <h2>Current Knowledge Base</h2>
+        <table id="kb-table">
+            <thead>
+                <tr>
+                    <th>Question</th>
+                    <th>Answer</th>
+                    <th class="actions">Actions</th>
+                </tr>
+            </thead>
+            <tbody id="kb-items">
+                <!-- Items will be loaded here -->
+            </tbody>
+        </table>
+    </div>
+
+    <script>
+        // Load knowledge base items
+        function loadKnowledgeBase() {
+            fetch('/api/knowledge')
+                .then(response => response.json())
+                .then(data => {
+                    const tbody = document.getElementById('kb-items');
+                    tbody.innerHTML = '';
+
+                    data.items.forEach((item, index) => {
+                        const row = document.createElement('tr');
+                        row.dataset.id = index;
+
+                        const questionCell = document.createElement('td');
+                        questionCell.textContent = item.question;
+
+                        const answerCell = document.createElement('td');
+                        answerCell.textContent = item.answer;
+
+                        const actionCell = document.createElement('td');
+                        const deleteBtn = document.createElement('button');
+                        deleteBtn.textContent = 'Delete';
+                        deleteBtn.className = 'delete-btn';
+                        deleteBtn.addEventListener('click', () => deleteItem(index));
+                        actionCell.appendChild(deleteBtn);
+
+                        row.appendChild(questionCell);
+                        row.appendChild(answerCell);
+                        row.appendChild(actionCell);
+
+                        tbody.appendChild(row);
+                    });
+                })
+                .catch(error => console.error('Error loading knowledge base:', error));
+        }
+
+        // Add new knowledge base item
+        document.getElementById('add-btn').addEventListener('click', () => {
+            const question = document.getElementById('question').value.trim();
+            const answer = document.getElementById('answer').value.trim();
+
+            if (!question || !answer) {
+                alert('Both question and answer are required!');
+                return;
+            }
+
+            fetch('/api/knowledge', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({ question, answer })
+            })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        // Clear form
+                        document.getElementById('question').value = '';
+                        document.getElementById('answer').value = '';
+
+                        // Show success message
+                        const successMessage = document.getElementById('success-message');
+                        successMessage.textContent = 'Knowledge base entry added successfully!';
+                        successMessage.style.display = 'block';
+
+                        // Hide message after 3 seconds
+                        setTimeout(() => {
+                            successMessage.style.display = 'none';
+                        }, 3000);
+
+                        // Reload the knowledge base
+                        loadKnowledgeBase();
+                    } else {
+                        alert('Error adding entry: ' + (data.error || 'Unknown error'));
+                    }
+                })
+                .catch(error => console.error('Error adding knowledge:', error));
+        });
+
+        // Delete knowledge base item
+        function deleteItem(id) {
+            if (confirm('Are you sure you want to delete this knowledge base entry?')) {
+                fetch(`/api/knowledge/${id}`, {
+                    method: 'DELETE'
+                })
+                    .then(response => response.json())
+                    .then(data => {
+                        if (data.success) {
+                            // Show success message
+                            const successMessage = document.getElementById('success-message');
+                            successMessage.textContent = 'Knowledge base entry deleted successfully!';
+                            successMessage.style.display = 'block';
+
+                            // Hide message after 3 seconds
+                            setTimeout(() => {
+                                successMessage.style.display = 'none';
+                            }, 3000);
+
+                            // Reload the knowledge base
+                            loadKnowledgeBase();
+                        } else {
+                            alert('Error deleting entry: ' + (data.error || 'Unknown error'));
+                        }
+                    })
+                    .catch(error => console.error('Error deleting knowledge:', error));
+            }
+        }
+
+        // Load knowledge base on page load
+        document.addEventListener('DOMContentLoaded', loadKnowledgeBase);
+    </script>
+</body>
+
+</html>
